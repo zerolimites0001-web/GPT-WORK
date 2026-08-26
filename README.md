@@ -1,22 +1,24 @@
-# GPT-WORK Browser
+# GPT-WORK Browser v2
 
-A real, buildable Android browser project using a native Android WebView and a Lua logic layer through LuaJ. LuaJ has an Android example and is distributed from Maven Central. citeturn0search0turn0search2
+Fast, editable Android browser with Lua-driven configuration and native WebView.
 
-## Working features
-- Android Gradle project.
-- Web navigation, address bar, back/forward/reload/home.
-- Google and DuckDuckGo search selection.
-- Multiple-tab foundation.
-- Bookmarks persisted in app preferences.
-- DownloadManager integration.
-- History/cache clearing.
-- Dark/light theme switching.
-- Lua-driven search URL generation.
-- WebView Safe Browsing where supported, HTTPS/HTTP navigation only, hardware rendering.
-- GitHub Actions debug APK build.
+## V2
+
+- Larger bottom action for **new tab**.
+- Visual tab chooser with new-tab action.
+- Loading progress bar and page status.
+- Google / DuckDuckGo search switching.
+- Persistent bookmarks.
+- **Bookmarklet manager**: create and execute JavaScript bookmarklets.
+- **Native DevTools panel**: console capture, JavaScript evaluator, HTML dump, WebView/runtime info.
+- Fast WebView defaults: hardware rendering, cache, DOM storage, Safe Browsing, image loading and offscreen preraster where supported.
+- Settings: homepage, JavaScript, desktop user-agent, popup preference, Safe Browsing and DNS/DoH profile.
+- Downloads through Android DownloadManager.
+
+### DNS note
+
+The DNS setting stores and tests a custom DNS/DoH endpoint, but Android WebView does not expose a simple per-WebView DNS setter. A true per-app DNS transport requires a network/VPN/HTTP stack layer. V2 deliberately does not pretend the setting changes WebView DNS when it does not.
 
 ## Build
 
-GitHub Actions installs Gradle 8.10.2 and Android SDK 35, then runs `gradle :app:assembleDebug`. The APK is uploaded as the `GPT-WORK-debug` artifact.
-
-This is intentionally modular: the native host is kept small while browser behavior can be moved into `lua/` modules as features grow.
+GitHub Actions builds the debug APK automatically from `main`.

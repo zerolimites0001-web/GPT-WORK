@@ -7,4 +7,7 @@ return {
   block_popups = true,
   restore_tabs = true,
   downloads = true,
+  dns_profile = "",
+  bookmarklets = true,
+  devtools = true,
 }
