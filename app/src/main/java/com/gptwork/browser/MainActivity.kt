@@ -24,6 +24,11 @@ import java.io.File
 import java.net.URL
 import java.util.concurrent.Executors
 
+data class GTab(val webView: WebView, var url: String, var title: String)
+object WebHolder {
+    val tabs = mutableListOf<GTab>()
+    var currentIndex = -1
+}
 class MainActivity : AppCompatActivity() {
     private lateinit var webContainer: FrameLayout
     private lateinit var address: EditText
@@ -32,9 +37,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var titleText: TextView
     private val lua = LuaEngine()
     private val prefs by lazy { getSharedPreferences("gptwork", MODE_PRIVATE) }
-    private data class Tab(val webView: WebView, var url: String, var title: String)
-    private val tabs = mutableListOf<Tab>()
-    private var currentIndex = -1
+    private val tabs get() = WebHolder.tabs
+    private var currentIndex
+        get() = WebHolder.currentIndex
+        set(v) { WebHolder.currentIndex = v }
     private val console = mutableListOf<String>()
     private val executor = Executors.newSingleThreadExecutor()
     private var provider = "google"
@@ -305,7 +311,7 @@ class MainActivity : AppCompatActivity() {
         val w = createWebView()
         w.visibility = View.GONE
         webContainer.addView(w, ViewGroup.LayoutParams(-1,-1))
-        val tab = Tab(w, url, url)
+        val tab = GTab(w, url, url)
         tabs.add(tab)
         // pause previous
          // mantem aba anterior rodando p/ audio em background
@@ -395,7 +401,21 @@ class MainActivity : AppCompatActivity() {
         // Mantém audio em segundo plano - inicia foreground service estilo Spotify
         startBgService()
     }
-    override fun onDestroy() { stopBgService(); executor.shutdownNow(); for (t in tabs) t.webView.destroy(); super.onDestroy() }
+    override fun onDestroy() {
+        // Se tem musica tocando, NAO destroi WebViews - deixa Service segurar
+        val hasPlaying = tabs.any { it.webView.url?.contains("youtube") == true || it.webView.url?.contains("spotify") == true || it.webView.url?.contains("music") == true }
+        if (!hasPlaying) {
+            for (t in tabs) try{ t.webView.destroy() }catch(_:Exception){}
+            tabs.clear()
+        } else {
+            // Mantém tabs vivos no holder, só desanexa da Activity
+            for (t in tabs) try{ (t.webView.parent as? android.view.ViewGroup)?.removeView(t.webView) }catch(_:Exception){}
+            startBgService()
+        }
+        executor.shutdownNow()
+        super.onDestroy()
+    }
+    override fun onTaskRemoved(rootIntent: Intent?) { super.onTaskRemoved(rootIntent); startBgService() }
     @Deprecated("Compatibility") override fun onBackPressed() {
         val w = currentWeb
         if (w != null && w.canGoBack()) w.goBack() else {
