@@ -145,7 +145,7 @@ class MainActivity : AppCompatActivity() {
 
     @SuppressLint("SetJavaScriptEnabled")
     private fun createWebView(): WebView {
-        val w = WebView(this)
+        val w = WebView(applicationContext)
         val cm = CookieManager.getInstance()
         val cookiesEnabled = prefs.getBoolean("cookies", true)
         val domEnabled = prefs.getBoolean("domStorage", true)
@@ -233,7 +233,7 @@ class MainActivity : AppCompatActivity() {
             }
             override fun onCreateWindow(view: WebView, isDialog: Boolean, isUserGesture: Boolean, resultMsg: Message): Boolean {
                 if (!oauth) return false
-                val newWeb = WebView(this@MainActivity).apply { settings.javaScriptEnabled = true; settings.domStorageEnabled = true; settings.databaseEnabled = true }
+                val newWeb = WebView(applicationContext).apply { settings.javaScriptEnabled = true; settings.domStorageEnabled = true; settings.databaseEnabled = true }
                 val d = AlertDialog.Builder(this@MainActivity).setView(newWeb).setPositiveButton("Fechar",null).create()
                 d.show()
                 newWeb.webChromeClient = this
@@ -402,16 +402,10 @@ class MainActivity : AppCompatActivity() {
         startBgService()
     }
     override fun onDestroy() {
-        // Se tem musica tocando, NAO destroi WebViews - deixa Service segurar
-        val hasPlaying = tabs.any { it.webView.url?.contains("youtube") == true || it.webView.url?.contains("spotify") == true || it.webView.url?.contains("music") == true }
-        if (!hasPlaying) {
-            for (t in tabs) try{ t.webView.destroy() }catch(_:Exception){}
-            tabs.clear()
-        } else {
-            // Mantém tabs vivos no holder, só desanexa da Activity
-            for (t in tabs) try{ (t.webView.parent as? android.view.ViewGroup)?.removeView(t.webView) }catch(_:Exception){}
-            startBgService()
-        }
+        // Spotify real: NUNCA destroi WebViews ao fechar - deixa no holder p/ continuar tocando
+        // Só remove da view, mantém vivo no WebHolder
+        for (t in tabs) try{ (t.webView.parent as? android.view.ViewGroup)?.removeView(t.webView) }catch(_:Exception){}
+        if (tabs.isNotEmpty()) startBgService()
         executor.shutdownNow()
         super.onDestroy()
     }
