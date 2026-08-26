@@ -415,7 +415,6 @@ class MainActivity : AppCompatActivity() {
         executor.shutdownNow()
         super.onDestroy()
     }
-    override fun onTaskRemoved(rootIntent: Intent?) { super.onTaskRemoved(rootIntent); startBgService() }
     @Deprecated("Compatibility") override fun onBackPressed() {
         val w = currentWeb
         if (w != null && w.canGoBack()) w.goBack() else {
