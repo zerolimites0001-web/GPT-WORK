@@ -248,10 +248,7 @@ class MainActivity : AppCompatActivity() {
             AlertDialog.Builder(this).setTitle("⬇️ Download")
                 .setMessage("Deseja continuar?\n\nArquivo: $fileName\nTipo: $mimeType\n\nO arquivo pode ser nocivo. Só baixe se confia na origem.")
                 .setPositiveButton("Baixar") { _, _ ->
-                    // Pede permissões se necessário (Android <13)
-                    if (Build.VERSION.SDK_INT < 33) {
-                        try { requestPermissions(arrayOf(android.Manifest.permission.WRITE_EXTERNAL_STORAGE), 1001) } catch(_:Exception){}
-                    }
+                    // Só pede permissão se realmente necessário (Android <13 e não concedida) - não idiota
                     // 1) Salva via DownloadManager em /sdcard/Download
                     try {
                         val req = DownloadManager.Request(Uri.parse(url)).apply {
