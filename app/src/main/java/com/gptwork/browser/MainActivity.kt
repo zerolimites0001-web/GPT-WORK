@@ -12,7 +12,9 @@ import android.os.Environment
 import android.os.Message
 import android.view.Gravity
 import android.view.View
+import android.net.http.SslError
 import android.webkit.*
+import android.webkit.SslErrorHandler
 import android.widget.*
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -215,8 +217,7 @@ class MainActivity : AppCompatActivity() {
                 if (prefs.getBoolean("dnt", true)) view.evaluateJavascript("try{navigator.doNotTrack='1';window.doNotTrack='1'}catch(e){}",null)
             }
             override fun onReceivedSslError(view: WebView, handler: SslErrorHandler, error: SslError) {
-                // Segurança básica: mostra alerta mas permite continuar se usuário aceitar
-                AlertDialog.Builder(this@MainActivity).setTitle("⚠️ SSL").setMessage("Certificado inválido: ${error.url}\nContinuar?").setPositiveButton("Continuar"){_,_-> handler.proceed() }.setNegativeButton("Cancelar"){_,_-> handler.cancel() }.show()
+                AlertDialog.Builder(this@MainActivity).setTitle("⚠️ SSL").setMessage("Certificado inválido. Continuar?").setPositiveButton("Continuar"){_,_-> handler.proceed() }.setNegativeButton("Cancelar"){_,_-> handler.cancel() }.show()
             }
             override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
                 if (request.isForMainFrame) titleText.text = "Erro: ${error.description}"

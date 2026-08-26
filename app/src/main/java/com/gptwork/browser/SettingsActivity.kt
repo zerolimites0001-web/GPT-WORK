@@ -50,10 +50,11 @@ class SettingsActivity : AppCompatActivity() {
             addView(Switch(this@SettingsActivity).apply { text = "IndexDB (databaseEnabled)"; setTextColor(Color.WHITE); isChecked = prefs.getBoolean("indexdb",true); setOnCheckedChangeListener { _, v -> prefs.edit { putBoolean("indexdb", v) } } })
             addView(Switch(this@SettingsActivity).apply { text = "Cookies (incl. terceiro)"; setTextColor(Color.WHITE); isChecked = prefs.getBoolean("cookies",true); setOnCheckedChangeListener { _, v -> prefs.edit { putBoolean("cookies", v) }; CookieManager.getInstance().setAcceptCookie(v); try{ CookieManager.getInstance().setAcceptThirdPartyCookies(null as android.webkit.WebView?, v)}catch(_:Exception){} } })
             addView(subtitle("Gerenciar dados"))
-            addView(LinearLayout(this@SettingsActivity).apply {
+            val ctx = this@SettingsActivity
+            addView(LinearLayout(ctx).apply {
                 orientation = LinearLayout.HORIZONTAL
-                addView(Button(this@SettingsActivity).apply { text = "Ver Cookies"; setOnClickListener { showCookies() } }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { setMargins(0,0,6,0) })
-                addView(Button(this@SettingsActivity).apply { text = "Limpar tudo"; setOnClickListener { clearAll() } }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                addView(Button(ctx).apply { text = "Ver Cookies"; setOnClickListener { showCookies() } }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { setMargins(0,0,6,0) })
+                addView(Button(ctx).apply { text = "Limpar tudo"; setOnClickListener { clearAll() } }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
             })
         })
 
