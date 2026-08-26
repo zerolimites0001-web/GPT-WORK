@@ -1,20 +1,22 @@
 # GPT-WORK Browser
 
-A fast Android browser with a Lua logic layer and native WebView host.
+A real, buildable Android browser project using a native Android WebView and a Lua logic layer through LuaJ. LuaJ has an Android example and is distributed from Maven Central. citeturn0search0turn0search2
 
-## Included now
-- Real Android Gradle project.
-- WebView navigation, address/search bar, back/forward/reload/home.
+## Working features
+- Android Gradle project.
+- Web navigation, address bar, back/forward/reload/home.
 - Google and DuckDuckGo search selection.
-- Tabs foundation, bookmarks, downloads, history/cache clearing.
+- Multiple-tab foundation.
+- Bookmarks persisted in app preferences.
+- DownloadManager integration.
+- History/cache clearing.
 - Dark/light theme switching.
-- Lua runtime (`LuaJ`) used for search URL logic.
-- Safe Browsing, HTTPS-first navigation policy, hardware rendering.
-- Extension architecture remains exposed through `lua/extensions.lua` for future script hooks.
-- GitHub Actions builds a debug APK on every push/PR and manual dispatch.
+- Lua-driven search URL generation.
+- WebView Safe Browsing where supported, HTTPS/HTTP navigation only, hardware rendering.
+- GitHub Actions debug APK build.
 
-## Build locally
-Install Android Studio + SDK 35 + JDK 17, then run `./gradlew :app:assembleDebug`.
+## Build
 
-## APK
-Use the Actions artifact named `GPT-WORK-debug` after a successful workflow run.
+GitHub Actions installs Gradle 8.10.2 and Android SDK 35, then runs `gradle :app:assembleDebug`. The APK is uploaded as the `GPT-WORK-debug` artifact.
+
+This is intentionally modular: the native host is kept small while browser behavior can be moved into `lua/` modules as features grow.
