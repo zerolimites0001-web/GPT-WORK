@@ -102,7 +102,7 @@ class MainActivity : AppCompatActivity() {
         nav.addView(newTab)
         nav.addView(button("▣", { showTabs() }))
         nav.addView(button("★", { bookmark() }))
-        nav.addView(button("☰", { showMainMenu(this) }))
+        nav.addView(button("☰", { showMainMenu(web) }))
         root.addView(nav)
         setContentView(root)
     }
