@@ -2,7 +2,6 @@
 
 > **Status: Descontinuado / Discontinued — 26/08/2026**
 > Este repositório não receberá mais atualizações, correções ou suporte. O código permanece público sob licença MIT para estudo, fork ou arquivamento.
-> **Obrigado a todos que testaram no A02 e ajudaram! 🙏**
 > *This repository is discontinued and will no longer be maintained.*
 
 ---
@@ -12,7 +11,7 @@
 <p align="center">
   <img src="app/src/main/res/drawable/ic_launcher_foreground.xml" width="96" alt="GPT-WORK"/>
   <br/>
-  <b>Browser Android rápido, editável e com Lua — WebView turbo para low-end (A02 testado)</b>
+  <b>Browser Android rápido, editável e com Lua — WebView turbo</b>
   <br/>
   <a href="https://github.com/zerolimites0001-web/GPT-WORK/actions"><img src="https://github.com/zerolimites0001-web/GPT-WORK/workflows/Build%20GPT-WORK%20APK/badge.svg" alt="Build"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT"/></a>
@@ -38,7 +37,7 @@
 - [Uso](#uso)
 - [Configurações (engrenagem)](#configurações-engrenagem)
 - [Ícones SVG](#ícones-svg)
-- [Performance A02](#performance-a02)
+- [Performance](#performance)
 - [Permissões](#permissões)
 - [API e storage](#api-e-storage)
 - [Troubleshooting](#troubleshooting)
@@ -46,7 +45,7 @@
 - [Licença](#licença)
 
 ## O que é
-GPT-WORK Browser é um browser Android nativo escrito em Kotlin + WebView, com camada Lua editável (`lua/`), focado em ser **rápido em aparelhos low-end** (Galaxy A02), com abas reais, DevTools nativo, bookmarklets, e gestão completa de storage/cookies/OAuth.
+GPT-WORK Browser é um browser Android nativo escrito em Kotlin + WebView, com camada Lua editável (`lua/`), com abas reais, DevTools nativo, bookmarklets, e gestão completa de storage/cookies/OAuth.
 
 - **Package:** `com.gptwork.browser`
 - **Linguagem:** Kotlin 2.0.21 + Gradle 8.10.2 + AGP 8.7.3
@@ -66,7 +65,7 @@ GPT-WORK Browser é um browser Android nativo escrito em Kotlin + WebView, com c
 | **Privacidade** | `DNT` header/JS, `incognito`, `dnsProfile` (DoH) salvo, teste via `HttpURLConnection HEAD` |
 | **Downloads** | `DownloadManager` em `/sdcard/Download` + cópia em `filesDir/downloads`, dialog "Arquivo pode ser nocivo", `DownloadsActivity` com tempo, pausa (aviso), delete, FileProvider |
 | **UI** | 16 VectorDrawable SVG (`ic_home`, `ic_search`, `ic_tabs`, `ic_settings` gear, `ic_download`, etc), `Material3` DayNight |
-| **Perf A02** | `hardwareAccelerated`, `largeHeap`, `RENDERER_PRIORITY_IMPORTANT`, `offscreenPreRaster`, `setEnableSmoothTransition`, DNS prefetch HEAD, `app:about:blank` warm |
+| **Perf** | `hardwareAccelerated`, `largeHeap`, `RENDERER_PRIORITY_IMPORTANT`, `offscreenPreRaster`, `setEnableSmoothTransition`, DNS prefetch HEAD, `app:about:blank` warm |
 
 ## Arquitetura
 ```
@@ -139,7 +138,7 @@ GPT-WORK/
 - `setSupportMultipleWindows(oauth)` + `onCreateWindow` cria popup WebView com dialog.
 
 ## Segurança e privacidade
-- **Segurança:** `safeBrowsing` (default false p/ A02, toggleable), `httpsOnly`, `blockMixed`, `onReceivedSslError` dialog Proceed/Cancel, `allowFileAccess=false`, `allowUniversalAccessFromFileURLs=false`.
+- **Segurança:** `safeBrowsing` toggle, `httpsOnly`, `blockMixed`, `onReceivedSslError` dialog Proceed/Cancel, `allowFileAccess=false`, `allowUniversalAccessFromFileURLs=false`.
 - **Privacidade:** `DNT` via header/JS `navigator.doNotTrack='1'`, `incognito`, `dnsProfile` (salvo, testado HEAD), `saveFormData=false`, `setGeolocationEnabled(false)`.
 
 ## Downloads
@@ -157,7 +156,7 @@ GPT-WORK/
   - `onPause() -> startBgService()`
   - `onBackPressed() -> moveTaskToBack(true) + startBgService()` (não finish)
   - `onDestroy() -> não destrói holder, só removeView + startBgService()`
-- Testado A02: YouTube música continua com app em background/notificação.
+- YouTube música continua com app em background/notificação.
 
 ## Lua Engine
 ```kotlin
@@ -173,7 +172,7 @@ Usa `JsePlatform.standardGlobals().load(script).call()`.
   - `on: push main, pull_request, workflow_dispatch`
   - `runs-on: ubuntu-latest`
   - Steps: `checkout@v4`, `setup-java@v4 (temurin 17)`, `gradle/actions/setup-gradle@v4 (8.10.2)`, `android-actions/setup-android@v3`, `sdkmanager "platforms;android-35" "build-tools;35.0.0"`, `gradle :app:assembleDebug`, `upload-artifact@v4 (GPT-WORK-debug, app/build/outputs/apk/debug/*.apk)`
-- **NUNCA compila localmente** (8.6G livre em /data, mas regra do projeto é só Actions).
+- **Compila apenas via GitHub Actions**.
 
 ## Instalação
 1. Baixe o APK em `Actions` -> último `Build GPT-WORK APK` -> `GPT-WORK-debug` ou em `/sdcard/Download/GPT-WORK-v2.5-BG-FIX.apk` (se via device)
@@ -206,7 +205,7 @@ Acessível via `⚙️` bottom nav:
 ## Ícones SVG
 16 VectorDrawable em `res/drawable`: `ic_home`, `ic_search`, `ic_tabs`, `ic_bookmark`, `ic_settings` (gear), `ic_shield`, `ic_cookie`, `ic_storage`, `ic_back`, `ic_forward`, `ic_refresh`, `ic_add`, `ic_incognito`, `ic_devtools`, `ic_oauth`, `ic_download`, `ic_music_note`.
 
-## Performance A02
+## Performance
 - `hardwareAccelerated=true`, `largeHeap=true`, `RENDERER_PRIORITY_IMPORTANT`, `offscreenPreRaster`, `setEnableSmoothTransition`, `WebView(applicationContext)` warm-up em `BrowserApplication` (thread `MIN_PRIORITY`), DNS prefetch `HEAD` em `executor`, `cacheMode=LOAD_DEFAULT`.
 
 ## Permissões
@@ -232,7 +231,7 @@ Provider: `androidx.core.content.FileProvider` com `xml/file_paths.xml` (`files-
 - **Background para:** usar `applicationContext` WebView + holder + `moveTaskToBack`
 
 ## Descontinuação
-Este projeto foi descontinuado em 26/08/2026. Não haverá novos builds. Último APK estável: `GPT-WORK-v2.5-BG-FIX.apk` (Run #26, 6.0 MB). Para continuar, faça fork. Issues e PRs não serão respondidos.
+Este projeto foi descontinuado em 26/08/2026. Não haverá novos builds. Último APK estável: `GPT-WORK-v2.5-BG-FIX.apk` (6.0 MB). Para continuar, faça fork.
 
 ## Licença
 MIT - veja [LICENSE](LICENSE). Copyright (c) 2026 zerolimites0001-web
