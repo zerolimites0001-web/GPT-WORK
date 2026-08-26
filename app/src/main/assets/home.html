@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GPT-WORK • Início</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:system-ui,Segoe UI,Roboto}
+body{background:#0F1114;color:#E8EAED;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:24px 16px}
+.logo{font-size:28px;font-weight:800;letter-spacing:-0.5px;background:linear-gradient(90deg,#7C9CFF,#9EE493);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin:28px 0 14px}
+.sub{color:#9AA0A6;font-size:14px;margin-bottom:20px;text-align:center}
+.searchBox{width:100%;max-width:560px;background:#1E2026;border:1px solid #2A2E38;border-radius:16px;display:flex;align-items:center;padding:10px 14px;gap:10px;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.searchBox input{flex:1;background:transparent;border:0;outline:0;color:#fff;font-size:16px}
+.searchBox button{background:#7C9CFF;color:#0F1114;border:0;border-radius:10px;padding:10px 16px;font-weight:700;cursor:pointer}
+.grid{width:100%;max-width:560px;display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:22px 0}
+.tile{background:#1E2026;border:1px solid #2A2E38;border-radius:16px;padding:16px 8px;display:flex;flex-direction:column;align-items:center;gap:8px;text-decoration:none;color:#E8EAED;transition:transform .12s}
+.tile:active{transform:scale(.97)} .tile span{font-size:12px;color:#9AA0A6}
+.tile b{font-size:22px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:560px}
+.chip{background:#1E2026;border:1px solid #2A2E38;border-radius:999px;padding:8px 14px;font-size:13px;color:#C7D1DB}
+.footer{margin-top:auto;padding:18px;color:#7A8591;font-size:12px;display:flex;gap:10px;align-items:center}
+.badge{background:#1E2026;border:1px solid #2A2E38;border-radius:999px;padding:6px 10px;font-size:11px}
+</style>
+</head><body>
+<div class="logo">GPT-WORK BROWSER</div>
+<div class="sub">Rápido • Privado • com Lua</div>
+<div class="searchBox">
+  <span style="opacity:.6">🔍</span>
+  <input id="q" placeholder="Pesquisar no Google ou digitar endereço" onkeydown="if(event.key==='Enter')go()">
+  <button onclick="go()">Ir</button>
+</div>
+<div class="grid">
+  <a class="tile" href="https://www.google.com"><b>🔍</b><span>Google</span></a>
+  <a class="tile" href="https://www.youtube.com"><b>▶️</b><span>YouTube</span></a>
+  <a class="tile" href="https://github.com"><b>⭐</b><span>GitHub</span></a>
+  <a class="tile" href="https://duckduckgo.com"><b>🦆</b><span>DuckGo</span></a>
+  <a class="tile" href="https://www.wikipedia.org"><b>📚</b><span>Wiki</span></a>
+  <a class="tile" href="https://chat.openai.com"><b>🤖</b><span>ChatGPT</span></a>
+  <a class="tile" href="https://www.reddit.com"><b>👽</b><span>Reddit</span></a>
+  <a class="tile" href="https://x.com"><b>𝕏</b><span>X</span></a>
+</div>
+<div class="chips">
+  <span class="chip">⚡ Turbo A02</span>
+  <span class="chip">🛡️ Privacidade</span>
+  <span class="chip">🍪 Cookies controlados</span>
+  <span class="chip">🔐 OAuth Google</span>
+</div>
+<div class="footer"><span class="badge">IndexDB ✓</span><span class="badge">LocalStorage ✓</span><span class="badge">Redirect ✓</span><span class="badge">DoH ✓</span></div>
+<script>
+function go(){
+  var v=document.getElementById('q').value.trim();
+  if(!v) return;
+  if(v.indexOf('.')>-1 && v.indexOf(' ')==-1 && !v.startsWith('http')) v='https://'+v;
+  else if(!v.startsWith('http')) v='https://www.google.com/search?q='+encodeURIComponent(v);
+  location.href=v;
+}
+</script>
+</body></html>

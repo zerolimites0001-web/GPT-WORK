@@ -1,2 +1,5 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources><string name="app_name">GPT-WORK</string></resources>
+<resources>
+<string name="app_name">GPT-WORK</string>
+<string name="settings_title">Configurações</string>
+<string name="privacy">Privacidade e Segurança</string>
+</resources>
