@@ -116,7 +116,6 @@ class MainActivity : AppCompatActivity() {
         s.javaScriptEnabled = true
         s.domStorageEnabled = true
         s.databaseEnabled = true
-        try { s.setAppCacheEnabled(true); s.setAppCachePath(cacheDir.absolutePath) } catch (_: Exception) {}
         s.loadsImagesAutomatically = true
         s.blockNetworkImage = false
         s.useWideViewPort = true
