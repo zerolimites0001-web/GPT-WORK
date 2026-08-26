@@ -66,6 +66,16 @@ class MainActivity : AppCompatActivity() {
         .putString("homepage", homepage).putString("dns", dnsProfile).putBoolean("popups", blockPopups)
         .putBoolean("desktop", desktopMode).apply()
 
+    private fun startBgService() {
+        try {
+            val i = Intent(this, BackgroundAudioService::class.java)
+            if (Build.VERSION.SDK_INT >= 26) startForegroundService(i) else startService(i)
+        } catch (_: Exception) {}
+    }
+    private fun stopBgService() {
+        try { stopService(Intent(this, BackgroundAudioService::class.java)) } catch (_: Exception) {}
+    }
+
     private fun iconButton(iconRes: Int, content: String, action: () -> Unit): ImageView = ImageView(this).apply {
         setImageResource(iconRes); contentDescription = content
         setColorFilter(if (dark) Color.WHITE else Color.DKGRAY)
@@ -320,15 +330,20 @@ class MainActivity : AppCompatActivity() {
         loadPrefs()
         currentWeb?.settings?.javaScriptEnabled = prefs.getBoolean("js", true)
         currentWeb?.onResume(); currentWeb?.resumeTimers()
+        // Opcional: mantem notificação mesmo em foreground, não para ainda
     }
     override fun onPause() {
         super.onPause()
-        // Não pausa timers - mantém música/video em background
-        // currentWeb?.onPause() -> comentado pra não parar audio
+        // Mantém audio em segundo plano - inicia foreground service estilo Spotify
+        startBgService()
     }
-    override fun onDestroy() { executor.shutdownNow(); for (t in tabs) t.webView.destroy(); super.onDestroy() }
+    override fun onDestroy() { stopBgService(); executor.shutdownNow(); for (t in tabs) t.webView.destroy(); super.onDestroy() }
     @Deprecated("Compatibility") override fun onBackPressed() {
         val w = currentWeb
-        if (w != null && w.canGoBack()) w.goBack() else super.onBackPressed()
+        if (w != null && w.canGoBack()) w.goBack() else {
+            // Spotify mode: não fecha, vai p/ segundo plano e continua tocando
+            moveTaskToBack(true)
+            startBgService()
+        }
     }
 }
