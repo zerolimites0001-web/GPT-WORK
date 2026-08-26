@@ -89,7 +89,7 @@ class SettingsActivity : AppCompatActivity() {
 
         // Sobre
         root.addView(card {
-            addView(TextView(this).apply { text = "GPT-WORK Browser v2.1 • Turbo A02 • SVG + Lua\nWebView 35 • IndexDB / LocalStorage / Cookies • OAuth"; setTextColor(Color.rgb(122,133,145)); textSize = 11f; gravity = Gravity.CENTER; setPadding(0,12,0,0) })
+            addView(TextView(act).apply { text = "GPT-WORK Browser v2.1 • Turbo A02 • SVG + Lua\nWebView 35 • IndexDB / LocalStorage / Cookies • OAuth"; setTextColor(Color.rgb(122,133,145)); textSize = 11f; gravity = Gravity.CENTER; setPadding(0,12,0,0) })
         })
 
         root.addView(Space(this).apply { minimumHeight = 24 })
