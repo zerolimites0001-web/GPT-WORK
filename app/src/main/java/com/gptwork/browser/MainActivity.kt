@@ -6,15 +6,15 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.net.Uri
+import android.net.http.SslError
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.os.Message
 import android.view.Gravity
 import android.view.View
-import android.net.http.SslError
+import android.view.ViewGroup
 import android.webkit.*
-import android.webkit.SslErrorHandler
 import android.widget.*
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -23,14 +23,16 @@ import java.net.URL
 import java.util.concurrent.Executors
 
 class MainActivity : AppCompatActivity() {
-    private lateinit var web: WebView
+    private lateinit var webContainer: FrameLayout
     private lateinit var address: EditText
     private lateinit var tabsButton: TextView
     private lateinit var progress: ProgressBar
     private lateinit var titleText: TextView
     private val lua = LuaEngine()
     private val prefs by lazy { getSharedPreferences("gptwork", MODE_PRIVATE) }
-    private val pages = mutableListOf<String>()
+    private data class Tab(val webView: WebView, var url: String, var title: String)
+    private val tabs = mutableListOf<Tab>()
+    private var currentIndex = -1
     private val console = mutableListOf<String>()
     private val executor = Executors.newSingleThreadExecutor()
     private var provider = "google"
@@ -40,11 +42,13 @@ class MainActivity : AppCompatActivity() {
     private var blockPopups = true
     private var desktopMode = false
 
+    private val currentWeb: WebView?
+        get() = if (currentIndex in tabs.indices) tabs[currentIndex].webView else null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         loadPrefs()
         buildUi()
-        configureWebView()
         newTab(homepage)
     }
 
@@ -79,10 +83,9 @@ class MainActivity : AppCompatActivity() {
     private fun buildUi() {
         val bg = if (dark) Color.rgb(15,17,20) else Color.WHITE
         val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(bg) }
-        // Top bar
         val top = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(6,6,6,2); setBackgroundColor(bg) }
-        top.addView(iconButton(R.drawable.ic_back, "Voltar") { if (web.canGoBack()) web.goBack() })
-        top.addView(iconButton(R.drawable.ic_forward, "Avançar") { if (web.canGoForward()) web.goForward() })
+        top.addView(iconButton(R.drawable.ic_back, "Voltar") { currentWeb?.let { if (it.canGoBack()) it.goBack() } })
+        top.addView(iconButton(R.drawable.ic_forward, "Avançar") { currentWeb?.let { if (it.canGoForward()) it.goForward() } })
         address = EditText(this).apply {
             hint = "Pesquisar ou digitar endereço"; setSingleLine(true); imeOptions = 5; textSize = 15f
             setTextColor(if (dark) Color.WHITE else Color.DKGRAY); setHintTextColor(Color.GRAY)
@@ -91,8 +94,8 @@ class MainActivity : AppCompatActivity() {
             setOnEditorActionListener { _,_,_-> navigateInput(); true }
         }
         top.addView(address, LinearLayout.LayoutParams(0,56,1f).apply { setMargins(6,0,6,0) })
-        top.addView(iconButton(R.drawable.ic_refresh, "Recarregar") { web.reload() })
-        tabsButton = textButton("1", { showTabs() }, 14f).apply { setBackgroundColor(if(dark) Color.rgb(30,32,38) else Color.rgb(238,240,244)); background = android.graphics.drawable.GradientDrawable().apply { setColor(if(dark) Color.rgb(30,32,38) else Color.rgb(238,240,244)); cornerRadius = 14f } }
+        top.addView(iconButton(R.drawable.ic_refresh, "Recarregar") { currentWeb?.reload() })
+        tabsButton = textButton("0", { showTabs() }, 14f).apply { setBackgroundColor(if(dark) Color.rgb(30,32,38) else Color.rgb(238,240,244)); background = android.graphics.drawable.GradientDrawable().apply { setColor(if(dark) Color.rgb(30,32,38) else Color.rgb(238,240,244)); cornerRadius = 14f } }
         top.addView(tabsButton, LinearLayout.LayoutParams(52,52).apply { setMargins(4,0,0,0) })
         root.addView(top)
 
@@ -101,12 +104,11 @@ class MainActivity : AppCompatActivity() {
         progress = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply { max = 100; progress = 0; visibility = View.GONE; progressTintList = android.content.res.ColorStateList.valueOf(Color.rgb(124,156,255)) }
         root.addView(progress, LinearLayout.LayoutParams(-1,3))
 
-        web = WebView(this)
-        root.addView(web, LinearLayout.LayoutParams(-1,0,1f))
+        webContainer = FrameLayout(this)
+        root.addView(webContainer, LinearLayout.LayoutParams(-1,0,1f))
 
-        // Bottom nav with SVG icons
         val nav = LinearLayout(this).apply { gravity = Gravity.CENTER; setPadding(8,6,8,8); setBackgroundColor(bg) }
-        nav.addView(iconButton(R.drawable.ic_home, "Início") { web.loadUrl(homepage) })
+        nav.addView(iconButton(R.drawable.ic_home, "Início") { currentWeb?.loadUrl(homepage) })
         nav.addView(Space(this).apply { minimumWidth = 8 })
         val addTab = iconButton(R.drawable.ic_add, "Nova aba") { newTab(homepage) }.apply { setBackgroundColor(Color.rgb(124,156,255)); setColorFilter(Color.rgb(15,17,20)); background = android.graphics.drawable.GradientDrawable().apply { setColor(Color.rgb(124,156,255)); cornerRadius = 28f; setStroke(0,0) }; layoutParams = LinearLayout.LayoutParams(72,72).apply{ setMargins(8,0,8,0)} }
         nav.addView(addTab)
@@ -123,7 +125,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     @SuppressLint("SetJavaScriptEnabled")
-    private fun configureWebView() {
+    private fun createWebView(): WebView {
+        val w = WebView(this)
         val cm = CookieManager.getInstance()
         val cookiesEnabled = prefs.getBoolean("cookies", true)
         val domEnabled = prefs.getBoolean("domStorage", true)
@@ -131,21 +134,19 @@ class MainActivity : AppCompatActivity() {
         val safeBrowsing = prefs.getBoolean("safeBrowsing", false)
         val httpsOnly = prefs.getBoolean("httpsOnly", false)
         val blockMixed = prefs.getBoolean("blockMixed", true)
-        val dnt = prefs.getBoolean("dnt", true)
-        val redirect = prefs.getBoolean("redirect", true)
         val oauth = prefs.getBoolean("oauth", true)
 
         cm.setAcceptCookie(cookiesEnabled)
-        try { cm.setAcceptThirdPartyCookies(web, cookiesEnabled) } catch (_: Exception) {}
-        val s = web.settings
+        try { cm.setAcceptThirdPartyCookies(w, cookiesEnabled) } catch (_: Exception) {}
+        val s = w.settings
         s.javaScriptEnabled = prefs.getBoolean("js", true)
         s.domStorageEnabled = domEnabled
         s.databaseEnabled = indexDbEnabled
-        // IndexDB requires databaseEnabled + domStorageEnabled + allowFileAccess for blob
         s.allowFileAccess = false
         s.allowContentAccess = false
         s.allowFileAccessFromFileURLs = false
         s.allowUniversalAccessFromFileURLs = false
+        // Media fast load
         s.loadsImagesAutomatically = true
         s.blockNetworkImage = false
         s.useWideViewPort = true
@@ -160,71 +161,52 @@ class MainActivity : AppCompatActivity() {
         s.saveFormData = false
         s.javaScriptCanOpenWindowsAutomatically = oauth && !blockPopups
         s.setSupportMultipleWindows(oauth)
+        // Fast media: enable hardware, cache, prefetch
+        s.setEnableSmoothTransition(true)
         if (Build.VERSION.SDK_INT >= 26) s.safeBrowsingEnabled = safeBrowsing
         if (Build.VERSION.SDK_INT >= 23) s.offscreenPreRaster = true
-        try { if (Build.VERSION.SDK_INT >= 26) web.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, true) } catch (_: Exception) {}
-        applyUserAgent()
+        try { if (Build.VERSION.SDK_INT >= 26) w.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, true) } catch (_: Exception) {}
+        s.userAgentString = if (desktopMode) "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/131.0 Safari/537.36 GPT-WORK/2.1" else try { WebSettings.getDefaultUserAgent(this).replace(" GPT-WORK/1.0","") + " GPT-WORK/2.1" } catch (_:Exception) { "Mozilla/5.0 GPT-WORK/2.1" }
         if (BuildConfig.DEBUG) WebView.setWebContentsDebuggingEnabled(true)
-        web.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+        w.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+        // Keep alive in background for music/video
+        w.setBackgroundColor(Color.TRANSPARENT)
 
-        // DNT header via custom header injection
-        if (dnt) {
-            // will add in shouldIntercept via header
-        }
-
-        executor.execute {
-            try {
-                val c = URL(if (homepage.startsWith("file")) "https://www.google.com" else homepage).openConnection() as HttpURLConnection
-                c.requestMethod = "HEAD"; c.connectTimeout = 1500; c.readTimeout = 1500; c.connect(); c.disconnect()
-            } catch (_: Exception) {}
-        }
-
-        web.webViewClient = object : WebViewClient() {
-            override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest?): WebResourceResponse? {
-                // Privacidade: add DNT
-                return super.shouldInterceptRequest(view, request)
-            }
+        w.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                 val url = request.url.toString()
                 val scheme = request.url.scheme ?: return false
-                // OAuth domains - always allow
                 val oauthDomains = listOf("accounts.google.com","github.com","login.microsoftonline.com","appleid.apple.com","auth0.com","okta.com")
                 val isOAuth = oauth && oauthDomains.any { url.contains(it) }
                 if (isOAuth) return false
-                // Redirect handling
-                if (!redirect && request.isRedirect) return true
-                // HTTPS only
-                if (httpsOnly && scheme == "http") {
+                if (!prefs.getBoolean("redirect",true) && request.isRedirect) return true
+                if (prefs.getBoolean("httpsOnly", false) && scheme == "http") {
                     view.loadUrl(url.replace("http://","https://"))
                     return true
                 }
-                // Allow http/https/javascript only, block weird schemes unless oauth
                 if (scheme == "http" || scheme == "https" || scheme == "javascript" || scheme == "file" || scheme == "data") return false
-                // External intent for others (tel, mailto, intent)
-                return try {
-                    startActivity(Intent(Intent.ACTION_VIEW, request.url))
-                    true
-                } catch (_: Exception) { true }
+                return try { startActivity(Intent(Intent.ACTION_VIEW, request.url)); true } catch (_: Exception) { true }
             }
             override fun onPageStarted(view: WebView, url: String, favicon: android.graphics.Bitmap?) {
-                progress.visibility = View.VISIBLE; progress.progress = 5; address.setText(url); titleText.text = "Carregando…"
+                if (view == currentWeb) { progress.visibility = View.VISIBLE; progress.progress = 5; address.setText(url); titleText.text = "Carregando…" }
+                val idx = tabs.indexOfFirst { it.webView == view }
+                if (idx != -1) tabs[idx].url = url
             }
             override fun onPageFinished(view: WebView, url: String) {
-                address.setText(url); titleText.text = view.title?.take(40) ?: "GPT-WORK"; progress.progress = 100
-                progress.postDelayed({ progress.visibility = View.GONE }, 180)
-                if (pages.isNotEmpty()) pages[pages.lastIndex] = url
-                // Inject DNT JS
+                if (view == currentWeb) { address.setText(url); titleText.text = view.title?.take(40) ?: "GPT-WORK"; progress.progress = 100; progress.postDelayed({ progress.visibility = View.GONE }, 180) }
+                val idx = tabs.indexOfFirst { it.webView == view }
+                if (idx != -1) { tabs[idx].url = url; tabs[idx].title = view.title ?: url }
                 if (prefs.getBoolean("dnt", true)) view.evaluateJavascript("try{navigator.doNotTrack='1';window.doNotTrack='1'}catch(e){}",null)
             }
             override fun onReceivedSslError(view: WebView, handler: SslErrorHandler, error: SslError) {
                 AlertDialog.Builder(this@MainActivity).setTitle("⚠️ SSL").setMessage("Certificado inválido. Continuar?").setPositiveButton("Continuar"){_,_-> handler.proceed() }.setNegativeButton("Cancelar"){_,_-> handler.cancel() }.show()
             }
             override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
-                if (request.isForMainFrame) titleText.text = "Erro: ${error.description}"
+                if (request.isForMainFrame && view == currentWeb) titleText.text = "Erro: ${error.description}"
             }
         }
-        web.webChromeClient = object : WebChromeClient() {
-            override fun onProgressChanged(view: WebView, newProgress: Int) { progress.visibility = if (newProgress >= 100) View.GONE else View.VISIBLE; progress.progress = newProgress }
+        w.webChromeClient = object : WebChromeClient() {
+            override fun onProgressChanged(view: WebView, newProgress: Int) { if (view == currentWeb) { progress.visibility = if (newProgress >= 100) View.GONE else View.VISIBLE; progress.progress = newProgress } }
             override fun onConsoleMessage(message: ConsoleMessage): Boolean {
                 console.add("${message.messageLevel()}: ${message.message()} @ ${message.lineNumber()}")
                 if (console.size > 200) console.removeAt(0)
@@ -241,12 +223,13 @@ class MainActivity : AppCompatActivity() {
                 resultMsg.sendToTarget()
                 return true
             }
-            override fun onPermissionRequest(request: PermissionRequest) {
-                // Privacidade: nega por padrão, exceto se necessário
-                request.deny()
+            override fun onShowCustomView(view: View?, callback: CustomViewCallback?) {
+                // Fullscreen video - imporante p/ não pausar
+                super.onShowCustomView(view, callback)
             }
+            override fun onPermissionRequest(request: PermissionRequest) { request.deny() }
         }
-        web.setDownloadListener(DownloadListener { url, userAgent, _, mimeType, _ ->
+        w.setDownloadListener(DownloadListener { url, userAgent, _, mimeType, _ ->
             val req = DownloadManager.Request(Uri.parse(url)).apply {
                 setMimeType(mimeType); addRequestHeader("User-Agent", userAgent)
                 setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
@@ -255,45 +238,97 @@ class MainActivity : AppCompatActivity() {
             (getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager).enqueue(req)
             Toast.makeText(this, "Download iniciado", Toast.LENGTH_SHORT).show()
         })
+        // Don't pause when hidden - keep music/video playing
+        return w
     }
 
-    private fun applyUserAgent() {
-        val s = web.settings
-        s.userAgentString = if (desktopMode) {
-            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/131.0 Safari/537.36 GPT-WORK/2.1"
-        } else {
-            try { WebSettings.getDefaultUserAgent(this).replace(" GPT-WORK/1.0","") + " GPT-WORK/2.1" } catch (_:Exception) { "Mozilla/5.0 GPT-WORK/2.1" }
-        }
+    private fun switchTo(index: Int) {
+        if (index !in tabs.indices) return
+        // hide all
+        for (t in tabs) t.webView.visibility = View.GONE
+        currentIndex = index
+        val tab = tabs[index]
+        tab.webView.visibility = View.VISIBLE
+        // ensure container has it
+        if (tab.webView.parent == null) webContainer.addView(tab.webView, ViewGroup.LayoutParams(-1,-1))
+        address.setText(tab.url)
+        titleText.text = tab.title
+        tabsButton.text = "${index+1}/${tabs.size}"
+        // resume
+        tab.webView.onResume()
+        tab.webView.resumeTimers()
+    }
+
+    private fun newTab(url: String) {
+        val w = createWebView()
+        w.visibility = View.GONE
+        webContainer.addView(w, ViewGroup.LayoutParams(-1,-1))
+        val tab = Tab(w, url, url)
+        tabs.add(tab)
+        // pause previous
+         // mantem aba anterior rodando p/ audio em background
+        switchTo(tabs.size-1)
+        w.loadUrl(url)
+        updateTabsButton()
+    }
+
+    private fun updateTabsButton() {
+        tabsButton.text = if (tabs.isEmpty()) "0" else "${currentIndex+1}/${tabs.size}"
     }
 
     private fun navigateInput() {
+        val w = currentWeb ?: return
         val input = address.text.toString().trim(); if (input.isBlank()) return
         val url = if (input.startsWith("http://") || input.startsWith("https://")) input
         else if (input.startsWith("file://")) input
         else if (input.contains(".") && !input.contains(" ")) "https://$input"
         else lua.searchUrl(provider, input)
-        // HTTPS only redirect
         val finalUrl = if (prefs.getBoolean("httpsOnly", false) && url.startsWith("http://")) url.replace("http://","https://") else url
-        web.loadUrl(finalUrl)
+        w.loadUrl(finalUrl)
     }
 
-    private fun newTab(url: String) { pages.add(url); tabsButton.text = pages.size.toString(); web.loadUrl(url) }
-
     private fun showTabs() {
-        val items = pages.mapIndexed { i, u -> "${i + 1}. ${u.take(70)}" }.toTypedArray()
-        AlertDialog.Builder(this).setTitle("Abas (${pages.size})").setItems(items) { _, which ->
-            if (which in pages.indices) { web.loadUrl(pages[which]); tabsButton.text = (which + 1).toString() }
-        }.setPositiveButton("+ Nova aba") { _, _ -> newTab(homepage) }.setNegativeButton("Fechar") { _, _ -> }.show()
+        val items = tabs.mapIndexed { i, t -> "${if(i==currentIndex) "● " else ""}${i+1}. ${(t.title.take(30)).ifBlank { t.url.take(50)} }" }.toTypedArray()
+        if (items.isEmpty()) { newTab(homepage); return }
+        AlertDialog.Builder(this)
+            .setTitle("Abas (${tabs.size}) - toque para alternar")
+            .setItems(items) { _, which -> switchTo(which) }
+            .setPositiveButton("+ Nova aba") { _, _ -> newTab(homepage) }
+            .setNeutralButton("✕ Fechar aba") { _, _ ->
+                if (currentIndex != -1) {
+                    val idx = currentIndex
+                    val tab = tabs[idx]
+                    webContainer.removeView(tab.webView)
+                    tab.webView.destroy()
+                    tabs.removeAt(idx)
+                    if (tabs.isEmpty()) newTab(homepage) else switchTo((idx-1).coerceAtLeast(0))
+                    updateTabsButton()
+                }
+            }
+            .setNegativeButton("Fechar", null).show()
     }
 
     private fun bookmark() {
-        val url = web.url ?: return
-        val name = web.title ?: url
+        val url = currentWeb?.url ?: return
+        val name = currentWeb?.title ?: url
         val set = prefs.getStringSet("bookmarks", emptySet())!!.toMutableSet(); set.add("$name\t$url")
         prefs.edit().putStringSet("bookmarks", set).apply(); Toast.makeText(this, "Favorito salvo", Toast.LENGTH_SHORT).show()
     }
 
-    override fun onResume() { super.onResume(); loadPrefs(); applyUserAgent(); web.settings.javaScriptEnabled = prefs.getBoolean("js", true) }
-    override fun onDestroy() { executor.shutdownNow(); web.destroy(); super.onDestroy() }
-    @Deprecated("Compatibility") override fun onBackPressed() { if (web.canGoBack()) web.goBack() else super.onBackPressed() }
+    override fun onResume() {
+        super.onResume()
+        loadPrefs()
+        currentWeb?.settings?.javaScriptEnabled = prefs.getBoolean("js", true)
+        currentWeb?.onResume(); currentWeb?.resumeTimers()
+    }
+    override fun onPause() {
+        super.onPause()
+        // Não pausa timers - mantém música/video em background
+        // currentWeb?.onPause() -> comentado pra não parar audio
+    }
+    override fun onDestroy() { executor.shutdownNow(); for (t in tabs) t.webView.destroy(); super.onDestroy() }
+    @Deprecated("Compatibility") override fun onBackPressed() {
+        val w = currentWeb
+        if (w != null && w.canGoBack()) w.goBack() else super.onBackPressed()
+    }
 }
