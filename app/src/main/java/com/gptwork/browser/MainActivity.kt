@@ -102,7 +102,7 @@ class MainActivity : AppCompatActivity() {
         nav.addView(newTab)
         nav.addView(button("▣", { showTabs() }))
         nav.addView(button("★", { bookmark() }))
-        nav.addView(button("☰", { showMainMenu(it) }))
+        nav.addView(button("☰", { showMainMenu(this) }))
         root.addView(nav)
         setContentView(root)
     }
@@ -207,7 +207,7 @@ class MainActivity : AppCompatActivity() {
             menu.add("Configurações").setOnMenuItemClickListener { showSettings(); true }
             menu.add("Buscar: ${if (provider == "google") "Google" else "DuckDuckGo"}").setOnMenuItemClickListener { provider = if (provider == "google") "duckduckgo" else "google"; savePrefs(); true }
             menu.add("Limpar cache e histórico").setOnMenuItemClickListener { web.clearHistory(); web.clearCache(true); CookieManager.getInstance().removeAllCookies(null); true }
-            menu.show()
+            show()
         }
     }
 
