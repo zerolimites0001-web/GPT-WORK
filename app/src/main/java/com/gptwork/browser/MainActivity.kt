@@ -110,26 +110,53 @@ class MainActivity : AppCompatActivity() {
     @SuppressLint("SetJavaScriptEnabled")
     private fun configureWebView() {
         CookieManager.getInstance().setAcceptCookie(true)
+        try { CookieManager.getInstance().setAcceptThirdPartyCookies(web, true) } catch (_: Exception) {}
         val s = web.settings
+        // --- SPEED TUNING FOR A02 (low-end) ---
         s.javaScriptEnabled = true
         s.domStorageEnabled = true
         s.databaseEnabled = true
+        try { s.setAppCacheEnabled(true); s.setAppCachePath(cacheDir.absolutePath) } catch (_: Exception) {}
         s.loadsImagesAutomatically = true
+        s.blockNetworkImage = false
         s.useWideViewPort = true
         s.loadWithOverviewMode = true
         s.cacheMode = WebSettings.LOAD_DEFAULT
+        s.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
         s.setSupportZoom(true)
         s.builtInZoomControls = false
         s.displayZoomControls = false
-        s.mediaPlaybackRequiresUserGesture = true
+        s.mediaPlaybackRequiresUserGesture = false
         s.allowFileAccess = false
         s.allowContentAccess = false
-        if (Build.VERSION.SDK_INT >= 26) s.safeBrowsingEnabled = true
+        s.setGeolocationEnabled(false)
+        s.saveFormData = false
+        if (Build.VERSION.SDK_INT >= 26) s.safeBrowsingEnabled = false // desliga checagem online p/ ganhar 100-200ms no A02
         if (Build.VERSION.SDK_INT >= 23) s.offscreenPreRaster = true
+        // Renderer priority - deixa WebView mais rápido
+        try {
+            if (Build.VERSION.SDK_INT >= 26) web.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, true)
+        } catch (_: Exception) {}
         applyUserAgent()
-        WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG)
+        if (BuildConfig.DEBUG) WebView.setWebContentsDebuggingEnabled(true)
         web.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+        // Preconecta DNS/prefetch da homepage e Google
+        try {
+            web.post { web.loadUrl("about:blank") }
+            // DNS prefetch via JS
+            executor.execute {
+                try {
+                    val c = java.net.URL(homepage).openConnection() as java.net.HttpURLConnection
+                    c.requestMethod = "HEAD"; c.connectTimeout = 1500; c.readTimeout = 1500
+                    c.connect(); c.disconnect()
+                } catch (_: Exception) {}
+            }
+        } catch (_: Exception) {}
         web.webViewClient = object : WebViewClient() {
+            override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest?): android.webkit.WebResourceResponse? {
+                // Deixa cache cuidar, mas força cache agressivo p/ recursos estáticos
+                return super.shouldInterceptRequest(view, request)
+            }
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                 val scheme = request.url.scheme ?: return false
                 return scheme != "http" && scheme != "https" && scheme != "javascript"
