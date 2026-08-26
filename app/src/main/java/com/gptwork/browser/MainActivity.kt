@@ -14,11 +14,13 @@ import android.os.Message
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.webkit.URLUtil
 import android.webkit.*
 import android.widget.*
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import java.net.HttpURLConnection
+import java.io.File
 import java.net.URL
 import java.util.concurrent.Executors
 
@@ -125,6 +127,7 @@ class MainActivity : AppCompatActivity() {
         nav.addView(Space(this).apply { minimumWidth = 8 })
         nav.addView(iconButton(R.drawable.ic_tabs, "Abas") { showTabs() })
         nav.addView(iconButton(R.drawable.ic_bookmark, "Favoritos") { bookmark() })
+        nav.addView(iconButton(R.drawable.ic_download, "Downloads") { showDownloads() })
         nav.addView(iconButton(R.drawable.ic_settings, "Configurações") { openSettings() })
         root.addView(nav)
         setContentView(root)
@@ -239,14 +242,46 @@ class MainActivity : AppCompatActivity() {
             }
             override fun onPermissionRequest(request: PermissionRequest) { request.deny() }
         }
-        w.setDownloadListener(DownloadListener { url, userAgent, _, mimeType, _ ->
-            val req = DownloadManager.Request(Uri.parse(url)).apply {
-                setMimeType(mimeType); addRequestHeader("User-Agent", userAgent)
-                setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, Uri.parse(url).lastPathSegment ?: "download")
-            }
-            (getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager).enqueue(req)
-            Toast.makeText(this, "Download iniciado", Toast.LENGTH_SHORT).show()
+        w.setDownloadListener(DownloadListener { url, userAgent, contentDisposition, mimeType, _ ->
+            // Pede confirmação - arquivo pode ser nocivo
+            val fileName = URLUtil.guessFileName(url, contentDisposition, mimeType) ?: Uri.parse(url).lastPathSegment ?: "download"
+            AlertDialog.Builder(this).setTitle("⬇️ Download")
+                .setMessage("Deseja continuar?\n\nArquivo: $fileName\nTipo: $mimeType\n\nO arquivo pode ser nocivo. Só baixe se confia na origem.")
+                .setPositiveButton("Baixar") { _, _ ->
+                    // Pede permissões se necessário (Android <13)
+                    if (Build.VERSION.SDK_INT < 33) {
+                        try { requestPermissions(arrayOf(android.Manifest.permission.WRITE_EXTERNAL_STORAGE), 1001) } catch(_:Exception){}
+                    }
+                    // 1) Salva via DownloadManager em /sdcard/Download
+                    try {
+                        val req = DownloadManager.Request(Uri.parse(url)).apply {
+                            setMimeType(mimeType); addRequestHeader("User-Agent", userAgent)
+                            setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                            setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
+                            setTitle(fileName); setDescription("Baixando via GPT-WORK")
+                        }
+                        (getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager).enqueue(req)
+                    } catch(e:Exception){ Toast.makeText(this, "Erro DownloadManager: ${e.message}", Toast.LENGTH_SHORT).show() }
+                    // 2) Salva também no data do app (cache/files) em background
+                    executor.execute {
+                        try {
+                            val conn = URL(url).openConnection() as HttpURLConnection
+                            conn.setRequestProperty("User-Agent", userAgent)
+                            conn.connect()
+                            if (conn.responseCode in 200..299) {
+                                val dir = File(filesDir, "downloads"); dir.mkdirs()
+                                val outFile = File(dir, fileName)
+                                conn.inputStream.use { input -> outFile.outputStream().use { output -> input.copyTo(output) } }
+                                runOnUiThread { Toast.makeText(this, "Salvo também em app: ${outFile.name}", Toast.LENGTH_SHORT).show() }
+                            }
+                            conn.disconnect()
+                        } catch(_:Exception){}
+                    }
+                    Toast.makeText(this, "Download iniciado: $fileName", Toast.LENGTH_SHORT).show()
+                }
+                .setNegativeButton("Cancelar", null)
+                .setNeutralButton("Ver Downloads") { _, _ -> showDownloads() }
+                .show()
         })
         // Don't pause when hidden - keep music/video playing
         return w
@@ -316,6 +351,32 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             .setNegativeButton("Fechar", null).show()
+    }
+
+    private fun showDownloads() {
+        val dmDir = File(filesDir, "downloads")
+        val appFiles = if (dmDir.exists()) dmDir.listFiles()?.map { "app: " + it.name + " (" + (it.length()/1024) + "KB)" } ?: emptyList() else emptyList()
+        val sdDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+        val sdFiles = if (sdDir.exists()) sdDir.listFiles()?.take(20)?.map { "sdcard: " + it.name } ?: emptyList() else emptyList()
+        val all = (appFiles + sdFiles).toTypedArray().ifEmpty { arrayOf("Nenhum download ainda") }
+        AlertDialog.Builder(this).setTitle("📁 Downloads")
+            .setItems(all) { _, i ->
+                val name = all[i]
+                Toast.makeText(this, name, Toast.LENGTH_SHORT).show()
+                // Abre pasta no sistema
+                try { startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(Uri.parse(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).toString()), "*/*")) } catch(_:Exception){
+                    // fallback abre gerenciador
+                    try { startActivity(Intent(DownloadManager.ACTION_VIEW_DOWNLOADS)) } catch(_:Exception){}
+                }
+            }
+            .setPositiveButton("Abrir pasta Download") { _, _ ->
+                try { startActivity(Intent(DownloadManager.ACTION_VIEW_DOWNLOADS)) } catch(_:Exception){
+                    Toast.makeText(this, sdDir.absolutePath, Toast.LENGTH_LONG).show()
+                }
+            }
+            .setNegativeButton("Fechar", null)
+            .setNeutralButton("Limpar app") { _, _ -> try { dmDir.listFiles()?.forEach { it.delete() }; Toast.makeText(this,"Downloads do app limpos",Toast.LENGTH_SHORT).show() } catch(_:Exception){} }
+            .show()
     }
 
     private fun bookmark() {
