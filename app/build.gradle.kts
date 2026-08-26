@@ -13,6 +13,7 @@ android {
         versionCode = 2
         versionName = "2.0.0"
     }
+    buildFeatures { buildConfig = true }
     buildTypes {
         release { isMinifyEnabled = true; proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro") }
         debug { isMinifyEnabled = false }
