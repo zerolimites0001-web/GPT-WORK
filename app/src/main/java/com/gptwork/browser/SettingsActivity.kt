@@ -18,6 +18,7 @@ class SettingsActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val act = this
         val scroll = ScrollView(this).apply { setBackgroundColor(Color.rgb(15,17,20)) }
         val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(24,24,24,24) }
 
@@ -33,28 +34,27 @@ class SettingsActivity : AppCompatActivity() {
         root.addView(title("🌐 Geral"))
         root.addView(card {
             addView(subtitle("Homepage • Tela inicial própria"))
-            val home = EditText(this@SettingsActivity).apply { setText(prefs.getString("homepage","file:///android_asset/home.html")); hint = "file:///android_asset/home.html ou https://..."; setTextColor(Color.WHITE); setHintTextColor(Color.GRAY) }
+            val home = EditText(act).apply { setText(prefs.getString("homepage","file:///android_asset/home.html")); hint = "file:///android_asset/home.html ou https://..."; setTextColor(Color.WHITE); setHintTextColor(Color.GRAY) }
             addView(home)
-            addView(Switch(this@SettingsActivity).apply { text = "Modo desktop (UA)"; setTextColor(Color.WHITE); isChecked = prefs.getBoolean("desktop",false); setOnCheckedChangeListener { _, v -> prefs.edit { putBoolean("desktop", v) } } })
-            addView(Switch(this@SettingsActivity).apply { text = "JavaScript"; setTextColor(Color.WHITE); isChecked = prefs.getBoolean("js",true); setOnCheckedChangeListener { _, v -> prefs.edit { putBoolean("js", v) } } })
+            addView(Switch(act).apply { text = "Modo desktop (UA)"; setTextColor(Color.WHITE); isChecked = prefs.getBoolean("desktop",false); setOnCheckedChangeListener { _, v -> prefs.edit { putBoolean("desktop", v) } } })
+            addView(Switch(act).apply { text = "JavaScript"; setTextColor(Color.WHITE); isChecked = prefs.getBoolean("js",true); setOnCheckedChangeListener { _, v -> prefs.edit { putBoolean("js", v) } } })
             addView(subtitle("Buscador: toque para alternar Google/DuckDuckGo"))
             val prov = prefs.getString("provider","google")
-            addView(Button(this@SettingsActivity).apply { text = "Buscador atual: $prov (tocar para alternar)"; setOnClickListener { val n = if (prefs.getString("provider","google")=="google") "duckduckgo" else "google"; prefs.edit { putString("provider", n) }; text = "Buscador atual: $n"; Toast.makeText(this@SettingsActivity,"Buscador: $n",Toast.LENGTH_SHORT).show() } })
+            addView(Button(act).apply { text = "Buscador atual: $prov (tocar para alternar)"; setOnClickListener { val n = if (prefs.getString("provider","google")=="google") "duckduckgo" else "google"; prefs.edit { putString("provider", n) }; text = "Buscador atual: $n"; Toast.makeText(act,"Buscador: $n",Toast.LENGTH_SHORT).show() } })
         })
 
         // Armazenamento
         root.addView(title("💾 Armazenamento"))
         root.addView(card {
             addView(subtitle("IndexDB • LocalStorage • Cookies • Cache"))
-            addView(Switch(this@SettingsActivity).apply { text = "LocalStorage / DOM Storage"; setTextColor(Color.WHITE); isChecked = prefs.getBoolean("domStorage",true); setOnCheckedChangeListener { _, v -> prefs.edit { putBoolean("domStorage", v) } } })
-            addView(Switch(this@SettingsActivity).apply { text = "IndexDB (databaseEnabled)"; setTextColor(Color.WHITE); isChecked = prefs.getBoolean("indexdb",true); setOnCheckedChangeListener { _, v -> prefs.edit { putBoolean("indexdb", v) } } })
-            addView(Switch(this@SettingsActivity).apply { text = "Cookies (incl. terceiro)"; setTextColor(Color.WHITE); isChecked = prefs.getBoolean("cookies",true); setOnCheckedChangeListener { _, v -> prefs.edit { putBoolean("cookies", v) }; CookieManager.getInstance().setAcceptCookie(v); try{ CookieManager.getInstance().setAcceptThirdPartyCookies(null as android.webkit.WebView?, v)}catch(_:Exception){} } })
+            addView(Switch(act).apply { text = "LocalStorage / DOM Storage"; setTextColor(Color.WHITE); isChecked = prefs.getBoolean("domStorage",true); setOnCheckedChangeListener { _, v -> prefs.edit { putBoolean("domStorage", v) } } })
+            addView(Switch(act).apply { text = "IndexDB (databaseEnabled)"; setTextColor(Color.WHITE); isChecked = prefs.getBoolean("indexdb",true); setOnCheckedChangeListener { _, v -> prefs.edit { putBoolean("indexdb", v) } } })
+            addView(Switch(act).apply { text = "Cookies (incl. terceiro)"; setTextColor(Color.WHITE); isChecked = prefs.getBoolean("cookies",true); setOnCheckedChangeListener { _, v -> prefs.edit { putBoolean("cookies", v) }; CookieManager.getInstance().setAcceptCookie(v); try{ CookieManager.getInstance().setAcceptThirdPartyCookies(null as android.webkit.WebView?, v)}catch(_:Exception){} } })
             addView(subtitle("Gerenciar dados"))
-            val ctx = this@SettingsActivity
-            addView(LinearLayout(ctx).apply {
+            addView(LinearLayout(act).apply {
                 orientation = LinearLayout.HORIZONTAL
-                addView(Button(ctx).apply { text = "Ver Cookies"; setOnClickListener { showCookies() } }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { setMargins(0,0,6,0) })
-                addView(Button(ctx).apply { text = "Limpar tudo"; setOnClickListener { clearAll() } }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                addView(Button(act).apply { text = "Ver Cookies"; setOnClickListener { showCookies() } }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { setMargins(0,0,6,0) })
+                addView(Button(act).apply { text = "Limpar tudo"; setOnClickListener { clearAll() } }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
             })
         })
 
@@ -62,29 +62,29 @@ class SettingsActivity : AppCompatActivity() {
         root.addView(title("🔐 Redirect & OAuth"))
         root.addView(card {
             addView(subtitle("Permite login com Google, GitHub, etc. via OAuth"))
-            addView(Switch(this@SettingsActivity).apply { text = "Permitir Redirects"; setTextColor(Color.WHITE); isChecked = prefs.getBoolean("redirect",true); setOnCheckedChangeListener { _, v -> prefs.edit { putBoolean("redirect", v) } } })
-            addView(Switch(this@SettingsActivity).apply { text = "OAuth Google / GitHub / Microsoft"; setTextColor(Color.WHITE); isChecked = prefs.getBoolean("oauth",true); setOnCheckedChangeListener { _, v -> prefs.edit { putBoolean("oauth", v) } } })
-            addView(Switch(this@SettingsActivity).apply { text = "Pop-ups (OAuth precisa)"; setTextColor(Color.WHITE); isChecked = !prefs.getBoolean("popups",true); text = if(isChecked) "Pop-ups permitidos" else "Pop-ups bloqueados"; setOnCheckedChangeListener { _, v -> prefs.edit { putBoolean("popups", !v) } } })
+            addView(Switch(act).apply { text = "Permitir Redirects"; setTextColor(Color.WHITE); isChecked = prefs.getBoolean("redirect",true); setOnCheckedChangeListener { _, v -> prefs.edit { putBoolean("redirect", v) } } })
+            addView(Switch(act).apply { text = "OAuth Google / GitHub / Microsoft"; setTextColor(Color.WHITE); isChecked = prefs.getBoolean("oauth",true); setOnCheckedChangeListener { _, v -> prefs.edit { putBoolean("oauth", v) } } })
+            addView(Switch(act).apply { text = "Pop-ups (OAuth precisa)"; setTextColor(Color.WHITE); isChecked = !prefs.getBoolean("popups",true); text = if(isChecked) "Pop-ups permitidos" else "Pop-ups bloqueados"; setOnCheckedChangeListener { _, v -> prefs.edit { putBoolean("popups", !v) } } })
             addView(subtitle("Domínios OAuth permitidos: accounts.google.com, github.com, login.microsoftonline.com, appleid.apple.com"))
         })
 
         // Segurança básica
         root.addView(title("🛡️ Segurança básica"))
         root.addView(card {
-            addView(Switch(this@SettingsActivity).apply { text = "Safe Browsing (Google)"; setTextColor(Color.WHITE); isChecked = prefs.getBoolean("safeBrowsing", false); setOnCheckedChangeListener { _, v -> prefs.edit { putBoolean("safeBrowsing", v) } } })
-            addView(Switch(this@SettingsActivity).apply { text = "HTTPS apenas (bloqueia HTTP)"; setTextColor(Color.WHITE); isChecked = prefs.getBoolean("httpsOnly", false); setOnCheckedChangeListener { _, v -> prefs.edit { putBoolean("httpsOnly", v) } } })
-            addView(Switch(this@SettingsActivity).apply { text = "Bloquear conteúdo misto"; setTextColor(Color.WHITE); isChecked = prefs.getBoolean("blockMixed", true); setOnCheckedChangeListener { _, v -> prefs.edit { putBoolean("blockMixed", v) } } })
+            addView(Switch(act).apply { text = "Safe Browsing (Google)"; setTextColor(Color.WHITE); isChecked = prefs.getBoolean("safeBrowsing", false); setOnCheckedChangeListener { _, v -> prefs.edit { putBoolean("safeBrowsing", v) } } })
+            addView(Switch(act).apply { text = "HTTPS apenas (bloqueia HTTP)"; setTextColor(Color.WHITE); isChecked = prefs.getBoolean("httpsOnly", false); setOnCheckedChangeListener { _, v -> prefs.edit { putBoolean("httpsOnly", v) } } })
+            addView(Switch(act).apply { text = "Bloquear conteúdo misto"; setTextColor(Color.WHITE); isChecked = prefs.getBoolean("blockMixed", true); setOnCheckedChangeListener { _, v -> prefs.edit { putBoolean("blockMixed", v) } } })
         })
 
         // Privacidade básica
         root.addView(title("👁️ Privacidade básica"))
         root.addView(card {
-            addView(Switch(this@SettingsActivity).apply { text = "Do Not Track"; setTextColor(Color.WHITE); isChecked = prefs.getBoolean("dnt", true); setOnCheckedChangeListener { _, v -> prefs.edit { putBoolean("dnt", v) } } })
-            addView(Switch(this@SettingsActivity).apply { text = "Modo privado (não salva histórico)"; setTextColor(Color.WHITE); isChecked = prefs.getBoolean("incognito", false); setOnCheckedChangeListener { _, v -> prefs.edit { putBoolean("incognito", v) } } })
+            addView(Switch(act).apply { text = "Do Not Track"; setTextColor(Color.WHITE); isChecked = prefs.getBoolean("dnt", true); setOnCheckedChangeListener { _, v -> prefs.edit { putBoolean("dnt", v) } } })
+            addView(Switch(act).apply { text = "Modo privado (não salva histórico)"; setTextColor(Color.WHITE); isChecked = prefs.getBoolean("incognito", false); setOnCheckedChangeListener { _, v -> prefs.edit { putBoolean("incognito", v) } } })
             addView(subtitle("DNS / DoH"))
-            val dns = EditText(this@SettingsActivity).apply { setText(prefs.getString("dns","")); hint = "https://dns.google/dns-query"; setTextColor(Color.WHITE); setHintTextColor(Color.GRAY) }
+            val dns = EditText(act).apply { setText(prefs.getString("dns","")); hint = "https://dns.google/dns-query"; setTextColor(Color.WHITE); setHintTextColor(Color.GRAY) }
             addView(dns)
-            addView(Button(this@SettingsActivity).apply { text = "Salvar DNS"; setOnClickListener { prefs.edit { putString("dns", dns.text.toString()) }; Toast.makeText(this@SettingsActivity,"DNS salvo",Toast.LENGTH_SHORT).show() } })
+            addView(Button(act).apply { text = "Salvar DNS"; setOnClickListener { prefs.edit { putString("dns", dns.text.toString()) }; Toast.makeText(act,"DNS salvo",Toast.LENGTH_SHORT).show() } })
         })
 
         // Sobre
