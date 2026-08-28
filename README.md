@@ -30,7 +30,6 @@
 - [Redirect & OAuth](#redirect--oauth)
 - [Segurança e privacidade](#segurança-e-privacidade)
 - [Downloads](#downloads)
-- [Background / Spotify mode](#background--spotify-mode)
 - [Lua Engine](#lua-engine)
 - [Build (GitHub Actions)](#build-github-actions)
 - [Instalação](#instalação)
@@ -53,12 +52,11 @@ GPT-WORK Browser é um browser Android nativo escrito em Kotlin + WebView, com c
 - **WebView:** `androidx.webkit:webkit:1.12.1`, hardware rendering, cache, DOM storage
 - **Lua:** `org.luaj:luaj-jse:3.0.1` para `searchUrl(provider, query)`
 
-## Features v2.5
+## Features v2.5.1 (sem Spotify/Background)
 | Categoria | Detalhe |
 |-----------|---------|
 | **Tela inicial** | `assets/home.html` com grid 8 tiles, busca, chips, badges IndexDB/LocalStorage/Redirect/DoH |
 | **Abas reais** | `FrameLayout` + `WebHolder` (`GTab`) com `applicationContext` WebView, `visibility` switch, música continua ao trocar |
-| **Background** | `BackgroundAudioService` foreground (`mediaPlayback`) + `WebHolder` nunca destrói, `moveTaskToBack` no back, notificação "Tocando em segundo plano" |
 | **Armazenamento** | Toggles `domStorage`, `databaseEnabled` (IndexDB), `CookieManager` + third-party, `WebStorage.deleteAllData()` |
 | **Redirect/OAuth** | `shouldOverrideUrlLoading` permite `accounts.google.com`, `github.com`, `login.microsoftonline.com`, `appleid.apple.com` quando `oauth=true`; `setSupportMultipleWindows` + `onCreateWindow` |
 | **Segurança** | `safeBrowsing` toggle, `httpsOnly`, `blockMixed` (`MIXED_CONTENT_NEVER_ALLOW`), `onReceivedSslError` com dialog |
@@ -72,7 +70,6 @@ GPT-WORK Browser é um browser Android nativo escrito em Kotlin + WebView, com c
 App (BrowserApplication)
  └─ MainActivity (FrameLayout webContainer + top bar + bottom nav)
      ├─ WebHolder (object singleton, GTab list)
-     ├─ BackgroundAudioService (foreground, START_STICKY)
      ├─ SettingsActivity (gear)
      └─ DownloadsActivity (FileProvider)
 LuaEngine (JsePlatform) -> searchUrl()
@@ -148,15 +145,7 @@ GPT-WORK/
 - **Permissões:** `WRITE_EXTERNAL_STORAGE` (maxSdk 32), `READ_EXTERNAL_STORAGE` (maxSdk 32), `READ_MEDIA_*`; só pede se `SDK <33` e necessário (não idiota).
 - **DownloadsActivity:** `ScrollView` + `LinearLayout`, seções `app/files/downloads` e `DownloadManager` (`/sdcard/Download`), cada card com `ProgressBar`, `⏱ tempo`, `pausar` (aviso que DM não suporta), `deletar` (`dm.remove(id)` ou `file.delete()`), `abrir` via `FileProvider` ou `DownloadManager.getUriForDownloadedFile`.
 
-## Background / Spotify mode
-- `BackgroundAudioService : Service` com `NotificationChannel gptwork_playback`, `START_STICKY`, `FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK` (Android 14+)
-- Notificação ongoing: "GPT-WORK • Tocando em segundo plano • Toque para voltar" + ação Parar
-- `MainActivity`:
-  - `WebView(applicationContext)` para sobreviver
-  - `onPause() -> startBgService()`
-  - `onBackPressed() -> moveTaskToBack(true) + startBgService()` (não finish)
-  - `onDestroy() -> não destrói holder, só removeView + startBgService()`
-- YouTube música continua com app em background/notificação.
+## Lua Engine
 
 ## Lua Engine
 ```kotlin

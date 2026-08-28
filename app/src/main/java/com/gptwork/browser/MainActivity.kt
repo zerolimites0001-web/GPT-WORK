@@ -74,14 +74,7 @@ class MainActivity : AppCompatActivity() {
         .putString("homepage", homepage).putString("dns", dnsProfile).putBoolean("popups", blockPopups)
         .putBoolean("desktop", desktopMode).apply()
 
-    private fun startBgService() {
-        try {
-            val i = Intent(this, BackgroundAudioService::class.java)
-            if (Build.VERSION.SDK_INT >= 26) startForegroundService(i) else startService(i)
-        } catch (_: Exception) {}
-    }
     private fun stopBgService() {
-        try { stopService(Intent(this, BackgroundAudioService::class.java)) } catch (_: Exception) {}
     }
 
     private fun iconButton(iconRes: Int, content: String, action: () -> Unit): ImageView = ImageView(this).apply {
@@ -399,13 +392,11 @@ class MainActivity : AppCompatActivity() {
     override fun onPause() {
         super.onPause()
         // Mantém audio em segundo plano - inicia foreground service estilo Spotify
-        startBgService()
     }
     override fun onDestroy() {
         // Spotify real: NUNCA destroi WebViews ao fechar - deixa no holder p/ continuar tocando
         // Só remove da view, mantém vivo no WebHolder
         for (t in tabs) try{ (t.webView.parent as? android.view.ViewGroup)?.removeView(t.webView) }catch(_:Exception){}
-        if (tabs.isNotEmpty()) startBgService()
         executor.shutdownNow()
         super.onDestroy()
     }
@@ -414,7 +405,6 @@ class MainActivity : AppCompatActivity() {
         if (w != null && w.canGoBack()) w.goBack() else {
             // Spotify mode: não fecha, vai p/ segundo plano e continua tocando
             moveTaskToBack(true)
-            startBgService()
-        }
+            }
     }
 }
