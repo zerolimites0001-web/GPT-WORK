@@ -391,7 +391,7 @@ class MainActivity : AppCompatActivity() {
         fun renderConsole(){ content.text = if(DevTools.console.isEmpty()) "Console vazio" else DevTools.console.joinToString("\n"){ "[${it.time}] ${it.level}: ${it.msg}" } }
         fun renderResources(){ content.text = if(DevTools.resources.isEmpty()) "Nenhum recurso" else DevTools.resources.joinToString("\n") }
         fun renderSource(){ val w=currentWeb; if(w==null) content.text="Sem aba"; else w.evaluateJavascript("(function(){return document.documentElement.outerHTML.slice(0,120000)})()"){ v-> content.text = v?.replace("\\\\n","\n")?.take(80000) ?: "vazio" } }
-        val btnNet = textButton("Network"){ renderNetwork() }; val btnCon = textButton("Console"){ renderConsole() }; val btnRes = textButton("Res"){ renderResources() }; val btnSrc = textButton("Source"){ renderSource() }
+        val btnNet = textButton("Network", { renderNetwork() }); val btnCon = textButton("Console", { renderConsole() }); val btnRes = textButton("Res", { renderResources() }); val btnSrc = textButton("Source", { renderSource() })
         tabLayout.addView(btnNet); tabLayout.addView(btnCon); tabLayout.addView(btnRes); tabLayout.addView(btnSrc)
         val box = LinearLayout(ctx).apply{ orientation=LinearLayout.VERTICAL; addView(tabLayout); addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f)) }
         renderNetwork()
