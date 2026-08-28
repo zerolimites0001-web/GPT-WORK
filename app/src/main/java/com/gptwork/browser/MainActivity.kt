@@ -128,6 +128,7 @@ class MainActivity : AppCompatActivity() {
         nav.addView(iconButton(R.drawable.ic_bookmark, "Favoritos") { bookmark() })
         nav.addView(iconButton(R.drawable.ic_download, "Downloads") { showDownloads() })
         nav.addView(iconButton(R.drawable.ic_settings, "Configurações") { openSettings() })
+        nav.addView(iconButton(R.drawable.ic_devtools, "DevTools") { showDevTools() })
         root.addView(nav)
         setContentView(root)
     }
@@ -184,7 +185,12 @@ class MainActivity : AppCompatActivity() {
         // Keep alive in background for music/video
         w.setBackgroundColor(Color.TRANSPARENT)
 
+        // DevTools capture early via shouldIntercept
         w.webViewClient = object : WebViewClient() {
+            override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
+                try { DevTools.logNet(request.url.toString(), request.method, request.requestHeaders, "intercept"); DevTools.logResource(request.url.toString()) } catch(_:Exception){}
+                return super.shouldInterceptRequest(view, request)
+            }
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                 val url = request.url.toString()
                 val scheme = request.url.scheme ?: return false
@@ -220,8 +226,9 @@ class MainActivity : AppCompatActivity() {
         w.webChromeClient = object : WebChromeClient() {
             override fun onProgressChanged(view: WebView, newProgress: Int) { if (view == currentWeb) { progress.visibility = if (newProgress >= 100) View.GONE else View.VISIBLE; progress.progress = newProgress } }
             override fun onConsoleMessage(message: ConsoleMessage): Boolean {
-                console.add("${message.messageLevel()}: ${message.message()} @ ${message.lineNumber()}")
-                if (console.size > 200) console.removeAt(0)
+                val l="${message.messageLevel()}: ${message.message()} @ ${message.lineNumber()}"
+                console.add(l); if (console.size > 200) console.removeAt(0)
+                DevTools.logConsole(message.messageLevel().name, l)
                 return true
             }
             override fun onCreateWindow(view: WebView, isDialog: Boolean, isUserGesture: Boolean, resultMsg: Message): Boolean {
@@ -375,6 +382,21 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
+    private fun showDevTools() {
+        val ctx=this
+        val tabLayout = LinearLayout(ctx).apply{ orientation=LinearLayout.HORIZONTAL }
+        val content = TextView(ctx).apply{ setPadding(12,12,12,12); textSize=11f; setTextIsSelectable(true) }
+        val scroll = ScrollView(ctx).apply{ addView(content) }
+        fun renderNetwork(){ content.text = if(DevTools.network.isEmpty()) "Nenhuma requisição capturada" else DevTools.network.joinToString("\n\n"){ "[${it.time}] ${it.method} ${it.type}\n${it.url}\n${it.headers.entries.joinToString()}" } }
+        fun renderConsole(){ content.text = if(DevTools.console.isEmpty()) "Console vazio" else DevTools.console.joinToString("\n"){ "[${it.time}] ${it.level}: ${it.msg}" } }
+        fun renderResources(){ content.text = if(DevTools.resources.isEmpty()) "Nenhum recurso" else DevTools.resources.joinToString("\n") }
+        fun renderSource(){ val w=currentWeb; if(w==null) content.text="Sem aba"; else w.evaluateJavascript("(function(){return document.documentElement.outerHTML.slice(0,120000)})()"){ v-> content.text = v?.replace("\\\\n","\n")?.take(80000) ?: "vazio" } }
+        val btnNet = textButton("Network"){ renderNetwork() }; val btnCon = textButton("Console"){ renderConsole() }; val btnRes = textButton("Res"){ renderResources() }; val btnSrc = textButton("Source"){ renderSource() }
+        tabLayout.addView(btnNet); tabLayout.addView(btnCon); tabLayout.addView(btnRes); tabLayout.addView(btnSrc)
+        val box = LinearLayout(ctx).apply{ orientation=LinearLayout.VERTICAL; addView(tabLayout); addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f)) }
+        renderNetwork()
+        AlertDialog.Builder(ctx).setTitle("DevTools — fecha p/ fechar").setView(box).setPositiveButton("Fechar",null).setNeutralButton("Limpar"){_,_-> DevTools.clear(); content.text="Limpo" }.setNegativeButton("JS"){_,_-> val inp=EditText(ctx).apply{ hint="javascript: ..." }; AlertDialog.Builder(ctx).setView(inp).setPositiveButton("Run"){_,_-> currentWeb?.evaluateJavascript(inp.text.toString()){ r-> Toast.makeText(ctx, r?.take(200) ?: "ok", Toast.LENGTH_SHORT).show() } }.show() }.show()
+    }
     private fun bookmark() {
         val url = currentWeb?.url ?: return
         val name = currentWeb?.title ?: url
