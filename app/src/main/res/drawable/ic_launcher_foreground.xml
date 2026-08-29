@@ -1,1 +1,14 @@
-<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108"><path android:fillColor="#7C9CFF" android:pathData="M54,10A44,44 0,1 0,54 98A44,44 0,1 0,54 10M34,54A20,20 0,1 1,74 54A20,20 0,1 1,34 54"/></vector>
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+  <!-- fundo arredondado -->
+  <path android:fillColor="#0F1114" android:pathData="M0,0h108v108h-108z"/>
+  <!-- círculo accent -->
+  <path android:fillColor="#7C9CFF" android:pathData="M54,18A36,36 0,1 0,54 90A36,36 0,1 0,54 18Z"/>
+  <!-- globo: meridianos -->
+  <path android:fillColor="#0F1114" android:fillAlpha="0.18" android:pathData="M54,26A28,28 0,0 0,54 82A28,28 0,0 0,54 26M54,26C58,36 58,72 54,82C50,72 50,36 54,26Z"/>
+  <path android:strokeColor="#FFFFFF" android:strokeWidth="2.2" android:strokeLineCap="round" android:pathData="M22,54H86M54,26A28,28 0,0 0,54 82A28,28 0,0 0,54 26M32,36Q54,44 76,36M32,72Q54,64 76,72M36,54A28,28 0,0 0,78 54"/>
+  <!-- ponteiro/busca -->
+  <path android:fillColor="#FFFFFF" android:pathData="M62,60L74,72L70,74L62,66Z"/>
+  <path android:fillColor="none" android:strokeColor="#FFFFFF" android:strokeWidth="2.5" android:pathData="M48,48A10,10 0,1 0,52 52"/>
+  <!-- G -->
+  <path android:fillColor="#0F1114" android:pathData="M54,42L54,50H60Q60,56 54,56A8,8 0,1 1,54 40Q57,40 59,42L59,42Z" android:strokeColor="#FFFFFF" android:strokeWidth="0.6"/>
+</vector>
