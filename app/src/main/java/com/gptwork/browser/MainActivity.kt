@@ -7,6 +7,7 @@ import android.content.Intent
 import android.graphics.Color
 import android.net.Uri
 import android.net.http.SslError
+import android.webkit.RenderProcessGoneDetail
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
