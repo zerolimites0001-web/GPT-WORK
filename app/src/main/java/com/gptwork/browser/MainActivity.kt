@@ -212,6 +212,10 @@ class MainActivity : AppCompatActivity() {
                 if (idx != -1) { tabs[idx].url = url; tabs[idx].title = view.title ?: url }
                 if (prefs.getBoolean("dnt", true)) view.evaluateJavascript("try{navigator.doNotTrack='1';window.doNotTrack='1'}catch(e){}",null)
             }
+            override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
+                try { if(detail.didCrash()) { view.reload() } else { (view.parent as? android.view.ViewGroup)?.removeView(view); view.destroy(); if(tabs.isNotEmpty()) newTab(homepage) } } catch(_:Exception){}
+                return true
+            }
             override fun onReceivedSslError(view: WebView, handler: SslErrorHandler, error: SslError) {
                 AlertDialog.Builder(this@MainActivity).setTitle("⚠️ SSL").setMessage("Certificado inválido. Continuar?").setPositiveButton("Continuar"){_,_-> handler.proceed() }.setNegativeButton("Cancelar"){_,_-> handler.cancel() }.show()
             }
