@@ -1,12 +1,11 @@
-# ⚠️ GPT-WORK Browser — DESCONTINUADO
+# 🚀 GPT-WORK Browser — Nova Release Ativa
 
-> **Status: Descontinuado / Discontinued — 26/08/2026**
-> Este repositório não receberá mais atualizações, correções ou suporte. O código permanece público sob licença MIT para estudo, fork ou arquivamento.
-> *This repository is discontinued and will no longer be maintained.*
+> **Status: Ativo ✅ — Nova Release disponível em [Actions](../../actions)**
+> Build automático via GitHub Actions — baixe o APK mais recente em `Actions → Build GPT-WORK APK → Artifacts`.
 
 ---
 
-# GPT-WORK Browser v2.5
+# GPT-WORK Browser v2.6
 
 <p align="center">
   <img src="app/src/main/res/drawable/ic_launcher_foreground.xml" width="96" alt="GPT-WORK"/>
@@ -40,7 +39,6 @@
 - [Permissões](#permissões)
 - [API e storage](#api-e-storage)
 - [Troubleshooting](#troubleshooting)
-- [Descontinuação](#descontinuação)
 - [Licença](#licença)
 
 ## O que é
@@ -218,9 +216,6 @@ Provider: `androidx.core.content.FileProvider` com `xml/file_paths.xml` (`files-
 - **flags shadowing em Service:** `Intent(...).apply { flags = ... }` sombreia param `flags` -> usar `addFlags()`
 - **DownloadManager pause:** não suporta pausa nativa, avisa usuário
 - **Background para:** usar `applicationContext` WebView + holder + `moveTaskToBack`
-
-## Descontinuação
-Este projeto foi descontinuado em 26/08/2026. Não haverá novos builds. Último APK estável: `GPT-WORK-v2.5-BG-FIX.apk` (6.0 MB). Para continuar, faça fork.
 
 ## Licença
 MIT - veja [LICENSE](LICENSE). Copyright (c) 2026 zerolimites0001-web
