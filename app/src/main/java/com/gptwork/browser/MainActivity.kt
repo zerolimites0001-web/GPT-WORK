@@ -128,7 +128,7 @@ class MainActivity : AppCompatActivity() {
         nav.addView(iconButton(R.drawable.ic_bookmark, "Favoritos") { bookmark() })
         nav.addView(iconButton(R.drawable.ic_download, "Downloads") { showDownloads() })
         nav.addView(iconButton(R.drawable.ic_settings, "Configurações") { openSettings() })
-        nav.addView(iconButton(R.drawable.ic_devtools, "DevTools") { showDevTools() })
+        // DevTools removido
         root.addView(nav)
         setContentView(root)
     }
@@ -165,7 +165,7 @@ class MainActivity : AppCompatActivity() {
         s.useWideViewPort = true
         s.loadWithOverviewMode = true
         s.cacheMode = WebSettings.LOAD_DEFAULT
-        s.mixedContentMode = if (blockMixed) WebSettings.MIXED_CONTENT_NEVER_ALLOW else WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
+        s.mixedContentMode = if (blockMixed) WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE else WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
         s.setSupportZoom(true)
         s.builtInZoomControls = false
         s.displayZoomControls = false
@@ -185,12 +185,7 @@ class MainActivity : AppCompatActivity() {
         // Keep alive in background for music/video
         w.setBackgroundColor(Color.TRANSPARENT)
 
-        // DevTools capture early via shouldIntercept
         w.webViewClient = object : WebViewClient() {
-            override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
-                try { DevTools.logNet(request.url.toString(), request.method, request.requestHeaders, "intercept"); DevTools.logResource(request.url.toString()) } catch(_:Exception){}
-                return super.shouldInterceptRequest(view, request)
-            }
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                 val url = request.url.toString()
                 val scheme = request.url.scheme ?: return false
@@ -198,7 +193,8 @@ class MainActivity : AppCompatActivity() {
                 val isOAuth = oauth && oauthDomains.any { url.contains(it) }
                 if (isOAuth) return false
                 if (!prefs.getBoolean("redirect",true) && request.isRedirect) return true
-                if (prefs.getBoolean("httpsOnly", false) && scheme == "http") {
+                val isLocal = url.contains("127.0.0.1") || url.contains("localhost") || url.contains("10.0.2.2") || url.contains("192.168.")
+                if (prefs.getBoolean("httpsOnly", false) && scheme == "http" && !isLocal) {
                     view.loadUrl(url.replace("http://","https://"))
                     return true
                 }
@@ -220,7 +216,13 @@ class MainActivity : AppCompatActivity() {
                 AlertDialog.Builder(this@MainActivity).setTitle("⚠️ SSL").setMessage("Certificado inválido. Continuar?").setPositiveButton("Continuar"){_,_-> handler.proceed() }.setNegativeButton("Cancelar"){_,_-> handler.cancel() }.show()
             }
             override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
-                if (request.isForMainFrame && view == currentWeb) titleText.text = "Erro: ${error.description}"
+                if (request.isForMainFrame && view == currentWeb) titleText.text = "Erro: ${error.description} — se for CDN/ads ignore, se for localhost use http://127.0.0.1:PORTA com cleartext permitido"
+            }
+            override fun onReceivedHttpError(view: WebView, request: WebResourceRequest, errorResponse: WebResourceResponse) {
+                // ignora erro de CDN/ads (ex: a.adtng.com REFUSED) para não quebrar página
+                if (request.isForMainFrame && view == currentWeb && errorResponse.statusCode >= 400) {
+                    // não bloqueia, apenas loga
+                }
             }
         }
         w.webChromeClient = object : WebChromeClient() {
@@ -228,7 +230,6 @@ class MainActivity : AppCompatActivity() {
             override fun onConsoleMessage(message: ConsoleMessage): Boolean {
                 val l="${message.messageLevel()}: ${message.message()} @ ${message.lineNumber()}"
                 console.add(l); if (console.size > 200) console.removeAt(0)
-                DevTools.logConsole(message.messageLevel().name, l)
                 return true
             }
             override fun onCreateWindow(view: WebView, isDialog: Boolean, isUserGesture: Boolean, resultMsg: Message): Boolean {
@@ -331,7 +332,8 @@ class MainActivity : AppCompatActivity() {
         else if (input.startsWith("file://")) input
         else if (input.contains(".") && !input.contains(" ")) "https://$input"
         else lua.searchUrl(provider, input)
-        val finalUrl = if (prefs.getBoolean("httpsOnly", false) && url.startsWith("http://")) url.replace("http://","https://") else url
+        val isLocalFinal = url.contains("127.0.0.1") || url.contains("localhost") || url.contains("10.0.2.2")
+        val finalUrl = if (prefs.getBoolean("httpsOnly", false) && url.startsWith("http://") && !isLocalFinal) url.replace("http://","https://") else url
         w.loadUrl(finalUrl)
     }
 
@@ -382,21 +384,6 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun showDevTools() {
-        val ctx=this
-        val tabLayout = LinearLayout(ctx).apply{ orientation=LinearLayout.HORIZONTAL }
-        val content = TextView(ctx).apply{ setPadding(12,12,12,12); textSize=11f; setTextIsSelectable(true) }
-        val scroll = ScrollView(ctx).apply{ addView(content) }
-        fun renderNetwork(){ content.text = if(DevTools.network.isEmpty()) "Nenhuma requisição capturada" else DevTools.network.joinToString("\n\n"){ "[${it.time}] ${it.method} ${it.type}\n${it.url}\n${it.headers.entries.joinToString()}" } }
-        fun renderConsole(){ content.text = if(DevTools.console.isEmpty()) "Console vazio" else DevTools.console.joinToString("\n"){ "[${it.time}] ${it.level}: ${it.msg}" } }
-        fun renderResources(){ content.text = if(DevTools.resources.isEmpty()) "Nenhum recurso" else DevTools.resources.joinToString("\n") }
-        fun renderSource(){ val w=currentWeb; if(w==null) content.text="Sem aba"; else w.evaluateJavascript("(function(){return document.documentElement.outerHTML.slice(0,120000)})()"){ v-> content.text = v?.replace("\\\\n","\n")?.take(80000) ?: "vazio" } }
-        val btnNet = textButton("Network", { renderNetwork() }); val btnCon = textButton("Console", { renderConsole() }); val btnRes = textButton("Res", { renderResources() }); val btnSrc = textButton("Source", { renderSource() })
-        tabLayout.addView(btnNet); tabLayout.addView(btnCon); tabLayout.addView(btnRes); tabLayout.addView(btnSrc)
-        val box = LinearLayout(ctx).apply{ orientation=LinearLayout.VERTICAL; addView(tabLayout); addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f)) }
-        renderNetwork()
-        AlertDialog.Builder(ctx).setTitle("DevTools — fecha p/ fechar").setView(box).setPositiveButton("Fechar",null).setNeutralButton("Limpar"){_,_-> DevTools.clear(); content.text="Limpo" }.setNegativeButton("JS"){_,_-> val inp=EditText(ctx).apply{ hint="javascript: ..." }; AlertDialog.Builder(ctx).setView(inp).setPositiveButton("Run"){_,_-> currentWeb?.evaluateJavascript(inp.text.toString()){ r-> Toast.makeText(ctx, r?.take(200) ?: "ok", Toast.LENGTH_SHORT).show() } }.show() }.show()
-    }
     private fun bookmark() {
         val url = currentWeb?.url ?: return
         val name = currentWeb?.title ?: url
